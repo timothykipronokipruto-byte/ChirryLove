@@ -1,295 +1,646 @@
 from kivy.app import App
-from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.label import Label
+from kivy.uix.button import Button
 from kivy.uix.image import Image
+from kivy.uix.behaviors import ButtonBehavior
+from kivy.uix.widget import Widget
+from kivy.graphics import Color, Ellipse
+from kivy.animation import Animation
+from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.utils import get_color_from_hex
+from kivy.properties import NumericProperty
 import random
+import os
 
-Window.clearcolor = (0.53, 0.81, 0.98, 1)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-sm = ScreenManager()
+Window.clearcolor = get_color_from_hex("#FFF0F5")
+
+sm = ScreenManager(
+    transition=FadeTransition(duration=0.45)
+)
+
+
+class ImageButton(ButtonBehavior, Image):
+    pass
+
+
+class FloatingHeart(Widget):
+
+    size_value = NumericProperty(20)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.size = (self.size_value, self.size_value)
+
+        with self.canvas:
+            Color(1, 0.3, 0.6, random.uniform(0.3, 0.8))
+            self.heart = Ellipse(
+                pos=self.pos,
+                size=self.size
+            )
+
+        self.bind(
+            pos=self.update_graphics,
+            size=self.update_graphics
+        )
+
+    def update_graphics(self, *args):
+        self.heart.pos = self.pos
+        self.heart.size = self.size
+
+
+class RomanticBackground(FloatLayout):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.bg = Image(
+            source=os.path.join(
+                BASE_DIR,
+                "assets",
+                "background.png"
+            ),
+            allow_stretch=True,
+            keep_ratio=False,
+            size_hint=(1, 1)
+        )
+
+        self.add_widget(self.bg)
+
+        Clock.schedule_interval(
+            self.spawn_heart,
+            0.6
+        )
+
+    def spawn_heart(self, dt):
+
+        heart = FloatingHeart()
+
+        heart.pos = (
+            random.randint(
+                0,
+                int(Window.width)
+            ),
+            -40
+        )
+
+        heart.size = (
+            random.randint(12, 28),
+            random.randint(12, 28)
+        )
+
+        self.add_widget(heart)
+
+        anim = Animation(
+            y=Window.height + 40,
+            duration=random.uniform(
+                5,
+                9
+            )
+        )
+
+        anim.bind(
+            on_complete=lambda *x:
+            self.remove_widget(heart)
+        )
+
+        anim.start(heart)
 
 
 class FirstScreen(Screen):
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        layout = FloatLayout()
+        root = RomanticBackground()
 
         title = Label(
-            text="❤️ Chirry My Love Will You Go On A Date With Me? ❤️",
-            font_size=28,
-            color=(0.5,0,0.5,1),
-            size_hint=(0.8,0.2),
-            pos_hint={"center_x":0.5,"top":0.95}
+            text="❤️\nChirry My Love\n\nWill You Go On A Date With Me?\n❤️",
+            font_size=33,
+            bold=True,
+            color=get_color_from_hex("#7B1FA2"),
+            size_hint=(0.9, 0.25),
+            pos_hint={
+                "center_x": 0.5,
+                "top": 0.95
+            },
+            halign="center",
+            valign="middle"
         )
 
-        yes = Button(
-            text="YES ❤️",
-            size_hint=(0.3,0.12),
-            pos_hint={"x":0.15,"y":0.2},
-            background_color=(0.5,0,0.5,1)
+        title.bind(
+            size=lambda i, v:
+            setattr(
+                i,
+                "text_size",
+                (i.width, i.height)
+            )
         )
 
-        no = Button(
-            text="NO 😅",
-            size_hint=(0.3,0.12),
-            pos_hint={"x":0.55,"y":0.2},
-            background_color=(0.5,0,0.5,1)
-        )
+        root.add_widget(title)
 
-        yes.bind(on_press=lambda x: setattr(sm,"current","food"))
-        no.bind(on_touch_down=self.move_button)
-
-        layout.add_widget(title)
-        layout.add_widget(yes)
-        layout.add_widget(no)
-
-        self.add_widget(layout)
-
-    def move_button(self, instance, touch):
-        if instance.collide_point(*touch.pos):
-            instance.pos_hint={
-                "x":random.random()*0.7,
-                "y":random.random()*0.6
+        self.photo = Image(
+            source=os.path.join(
+                BASE_DIR,
+                "love_photo.jpg"
+            ),
+            allow_stretch=True,
+            keep_ratio=True,
+            size_hint=(0.55, 0.35),
+            pos_hint={
+                "center_x": 0.5,
+                "center_y": 0.52
             }
+        )
+
+        root.add_widget(self.photo)
+
+        self.yes = ImageButton(
+            source=os.path.join(
+                BASE_DIR,
+                "assets",
+                "yes_heart.png"
+            ),
+            size_hint=(0.25, 0.18),
+            pos_hint={
+                "x": 0.12,
+                "y": 0.08
+            }
+        )
+
+        self.no = Button(
+            text="NO 😅",
+            font_size=20,
+            bold=True,
+            background_normal="",
+            background_color=get_color_from_hex("#F06292"),
+            color=(1, 1, 1, 1),
+            size_hint=(0.24, 0.11),
+            pos_hint={
+                "x": 0.62,
+                "y": 0.11
+            }
+        )
+
+        self.yes.bind(
+            on_press=self.go_yes
+        )
+
+        self.no.bind(
+            on_touch_down=self.move_no
+        )
+
+        root.add_widget(self.yes)
+        root.add_widget(self.no)
+
+        self.add_widget(root)
+
+        Clock.schedule_interval(
+            self.beat,
+            0.8
+        )
+    def beat(self, dt):
+
+        anim = Animation(
+            size_hint=(0.27, 0.20),
+            duration=0.35
+        ) + Animation(
+            size_hint=(0.25, 0.18),
+            duration=0.35
+        )
+
+        anim.start(self.yes)
+
+    def move_no(self, instance, touch):
+
+        if self.no.collide_point(*touch.pos):
+
+            self.no.pos_hint = {
+                "x": random.uniform(0.05, 0.75),
+                "y": random.uniform(0.05, 0.75)
+            }
+
             return True
+
+        return False
+
+    def go_yes(self, *args):
+
+        sm.current = "food"
 
 
 class FoodScreen(Screen):
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        layout = BoxLayout(
+        root = RomanticBackground()
+
+        box = BoxLayout(
             orientation="vertical",
-            padding=20,
-            spacing=10
+            spacing=20,
+            padding=30
         )
 
-        layout.add_widget(Label(
-            text="🥰 What would you like to eat Princess?",
-            font_size=24
-        ))
+        title = Label(
+            text="🍽️\nWhat would you like us to eat?",
+            font_size=30,
+            bold=True,
+            color=get_color_from_hex("#C2185B"),
+            size_hint=(1, .2)
+        )
+
+        box.add_widget(title)
 
         grid = GridLayout(
             cols=2,
-            spacing=10
-        )
-
-        for item in ["🍕 Pizza","🍔 Burger","🍗 Chicken","🍝 Pasta","🍟 Fries","🍣 Sushi"]:
-            btn=Button(text=item)
-            btn.bind(on_press=lambda x:setattr(sm,"current","fee"))
-            grid.add_widget(btn)
-
-        layout.add_widget(grid)
-        self.add_widget(layout)
-
-
-class FeeScreen(Screen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        layout=BoxLayout(
-            orientation="vertical",
-            padding=20,
-            spacing=20
-        )
-
-        layout.add_widget(Label(
-            text="😂 Just One Small Fee...\n\nSend KSh 1000 to confirm the date 😜",
-            font_size=22
-        ))
-
-        btn=Button(
-            text="💳 Send M-Pesa"
-        )
-
-        btn.bind(on_press=lambda x:setattr(sm,"current","date"))
-
-        layout.add_widget(btn)
-        self.add_widget(layout)
-
-
-class DateScreen(Screen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        layout=BoxLayout(
-            orientation="vertical",
-            padding=20,
-            spacing=20
-        )
-
-        layout.add_widget(Label(
-            text="""
-❤️ OUR DATE ❤️
-
-👧 Chirry       Ronoo 👦
-
-☕────────☕
-
-🍰    🍕
-
-📅 26th August
-
-📍 China Square, Nairobi
-
-❤️ Can't wait to see you ❤️
-""",
-            font_size=22
-        ))
-
-        btn=Button(
-            text="❤️ Continue ❤️"
-        )
-
-        btn.bind(
-            on_press=lambda x:setattr(sm,"current","girlfriends")
-        )
-
-        layout.add_widget(btn)
-
-        self.add_widget(layout)
-
-
-class GirlfriendsDayScreen(Screen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        layout=BoxLayout(
-            orientation="vertical",
-            padding=20
-        )
-
-        scroll=ScrollView()
-
-        label=Label(
-            text="""
-❤️ Happy Girlfriend's Day ❤️
-
-To My Beautiful Chirry,
-
-You bring light to my darkest days,
-calm to my storms,
-and love to my heart.
-
-You are my greatest blessing.
-
-I love you endlessly.
-
-Forever Yours,
-
-Ronoo
-""",
-            font_size=22,
+            spacing=20,
             size_hint_y=None
         )
 
-        label.bind(
-            texture_size=lambda instance,value:setattr(instance,"height",value[1])
+        grid.bind(
+            minimum_height=grid.setter("height")
         )
 
-        scroll.add_widget(label)
+        meals = [
+            "🍕 Pizza",
+            "🍔 Burger",
+            "🍗 Chicken",
+            "🍝 Pasta",
+            "🥩 Steak",
+            "🍣 Sushi",
+            "🌮 Tacos",
+            "🍨 Ice Cream"
+        ]
 
-        layout.add_widget(scroll)
+        for meal in meals:
 
-        btn=Button(
-            text="❤️ View Our Photo ❤️",
-            size_hint=(1,0.15)
-        )
+            btn = Button(
+                text=meal,
+                font_size=22,
+                background_normal="",
+                background_color=get_color_from_hex("#F48FB1"),
+                color=(1, 1, 1, 1),
+                height=70,
+                size_hint_y=None
+            )
 
-        btn.bind(
-            on_press=lambda x:setattr(sm,"current","photo")
-        )
+            btn.bind(
+                on_press=self.pick_food
+            )
 
-        layout.add_widget(btn)
+            grid.add_widget(btn)
 
-        self.add_widget(layout)
+        scroll = ScrollView()
 
+        scroll.add_widget(grid)
 
-class PhotoScreen(Screen):
+        box.add_widget(scroll)
+
+        root.add_widget(box)
+
+        self.add_widget(root)
+
+    def pick_food(self, button):
+
+        App.get_running_app().selected_food = button.text
+
+        sm.current = "date"
+class DateScreen(Screen):
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        layout=BoxLayout(
+        root = RomanticBackground()
+
+        card = BoxLayout(
             orientation="vertical",
-            padding=20,
-            spacing=20
+            spacing=20,
+            padding=35,
+            size_hint=(0.88, 0.82),
+            pos_hint={
+                "center_x": 0.5,
+                "center_y": 0.5
+            }
         )
 
-        layout.add_widget(Label(
-            text="❤️ Our Beautiful Memory ❤️",
-            font_size=28
-        ))
-
-        image=Image(
-            source="love_photo.jpg",
-            allow_stretch=True,
-            keep_ratio=True
+        title = Label(
+            text="💌 Our Date Invitation 💌",
+            font_size=30,
+            bold=True,
+            color=get_color_from_hex("#AD1457"),
+            size_hint=(1, .18)
         )
 
-        layout.add_widget(image)
+        self.details = Label(
+            text="",
+            font_size=22,
+            halign="center",
+            valign="middle",
+            color=get_color_from_hex("#6A1B9A")
+        )
 
-        btn=Button(
-            text="❤️ Continue ❤️",
-            size_hint=(1,0.15)
+        self.details.bind(
+            size=lambda i, v:
+            setattr(
+                i,
+                "text_size",
+                (i.width, i.height)
+            )
+        )
+
+        btn = Button(
+            text="I'm Excited ❤️",
+            font_size=24,
+            bold=True,
+            background_normal="",
+            background_color=get_color_from_hex("#EC407A"),
+            color=(1, 1, 1, 1),
+            size_hint=(1, .16)
         )
 
         btn.bind(
-            on_press=lambda x:setattr(sm,"current","final")
+            on_press=lambda x:
+            setattr(
+                sm,
+                "current",
+                "gallery"
+            )
+        )
+
+        card.add_widget(title)
+        card.add_widget(self.details)
+        card.add_widget(btn)
+
+        root.add_widget(card)
+
+        self.add_widget(root)
+
+    def on_pre_enter(self):
+
+        food = getattr(
+            App.get_running_app(),
+            "selected_food",
+            "Anything"
+        )
+
+        self.details.text = (
+            "📅 Saturday\n\n"
+            "🕓 4:00 PM\n\n"
+            "📍 Our Favorite Place\n\n"
+            f"🍽️ {food}\n\n"
+            "✨ It will be a beautiful day together ❤️"
+        )
+class GalleryScreen(Screen):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        root = RomanticBackground()
+
+        layout = BoxLayout(
+            orientation="vertical",
+            spacing=20,
+            padding=20
+        )
+
+        title = Label(
+            text="📸 Beautiful Memories",
+            font_size=30,
+            bold=True,
+            color=get_color_from_hex("#C2185B"),
+            size_hint=(1, .15)
+        )
+
+        layout.add_widget(title)
+
+        photo = Image(
+            source=os.path.join(
+                BASE_DIR,
+                "love_photo.jpg"
+            ),
+            allow_stretch=True,
+            keep_ratio=True,
+            size_hint=(1, .70)
+        )
+
+        layout.add_widget(photo)
+
+        btn = Button(
+            text="Continue ❤️",
+            font_size=24,
+            bold=True,
+            background_normal="",
+            background_color=get_color_from_hex("#EC407A"),
+            color=(1, 1, 1, 1),
+            size_hint=(1, .15)
+        )
+
+        btn.bind(
+            on_press=lambda x:
+            setattr(
+                sm,
+                "current",
+                "letter"
+            )
         )
 
         layout.add_widget(btn)
 
-        self.add_widget(layout)
+        root.add_widget(layout)
+
+        self.add_widget(root)
 
 
-class FinalScreen(Screen):
+class LetterScreen(Screen):
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.add_widget(Label(
-            text="""
-♥ ♥ ♥
+        root = RomanticBackground()
 
-My Dearest Chirry
+        layout = BoxLayout(
+            orientation="vertical",
+            spacing=20,
+            padding=30
+        )
 
-With your sweet YES,
-you made my heart skip a beat.
+        title = Label(
+            text="💌 A Letter For You",
+            font_size=30,
+            bold=True,
+            color=get_color_from_hex("#AD1457"),
+            size_hint=(1, .15)
+        )
 
-I can't wait to hold your hand,
-laugh with you,
-and make beautiful memories.
+        layout.add_widget(title)
 
-Forever Yours,
+        letter = Label(
+            text=(
+                "Every moment with you feels like a beautiful dream.\n\n"
+                "Your smile brightens my darkest days,\n"
+                "your laughter fills my heart with joy,\n"
+                "and every second spent with you\n"
+                "becomes a memory I'll treasure forever.\n\n"
+                "Thank you for being amazing.\n\n"
+                "❤️"
+            ),
+            font_size=22,
+            halign="center",
+            valign="middle",
+            color=get_color_from_hex("#6A1B9A")
+        )
 
-Ronoo
+        letter.bind(
+            size=lambda i, v:
+            setattr(
+                i,
+                "text_size",
+                (i.width, i.height)
+            )
+        )
 
-♥ ♥ ♥
-""",
-            font_size=22
-        ))
+        layout.add_widget(letter)
+
+        btn = Button(
+            text="One Last Surprise 🎁",
+            font_size=24,
+            bold=True,
+            background_normal="",
+            background_color=get_color_from_hex("#EC407A"),
+            color=(1, 1, 1, 1),
+            size_hint=(1, .15)
+        )
+
+        btn.bind(
+            on_press=lambda x:
+            setattr(
+                sm,
+                "current",
+                "final"
+            )
+        )
+
+        layout.add_widget(btn)
+
+        root.add_widget(layout)
+
+        self.add_widget(root)
+class FinalScreen(Screen):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        root = RomanticBackground()
+
+        layout = BoxLayout(
+            orientation="vertical",
+            spacing=25,
+            padding=35
+        )
+
+        title = Label(
+            text="❤️ The Final Surprise ❤️",
+            font_size=34,
+            bold=True,
+            color=get_color_from_hex("#AD1457"),
+            size_hint=(1, .15)
+        )
+
+        layout.add_widget(title)
+
+        final_photo = Image(
+            source=os.path.join(
+                BASE_DIR,
+                "love_photo.jpg"
+            ),
+            allow_stretch=True,
+            keep_ratio=True,
+            size_hint=(1, .45)
+        )
+
+        layout.add_widget(final_photo)
+
+        message = Label(
+            text=(
+                "Chirry ❤️\n\n"
+                "From the very first moment,\n"
+                "you made my world brighter.\n\n"
+                "Thank you for your smile,\n"
+                "your kindness,\n"
+                "and for simply being you.\n\n"
+                "Will you make more beautiful\n"
+                "memories with me?\n\n"
+                "❤️ I Like You ❤️"
+            ),
+            font_size=24,
+            halign="center",
+            valign="middle",
+            color=get_color_from_hex("#6A1B9A")
+        )
+
+        message.bind(
+            size=lambda i, v:
+            setattr(
+                i,
+                "text_size",
+                (i.width, i.height)
+            )
+        )
+
+        layout.add_widget(message)
+
+        finish = Button(
+            text="Forever Starts Here 💍",
+            font_size=24,
+            bold=True,
+            background_normal="",
+            background_color=get_color_from_hex("#EC407A"),
+            color=(1, 1, 1, 1),
+            size_hint=(1, .14)
+        )
+
+        finish.bind(
+            on_press=self.finish_app
+        )
+
+        layout.add_widget(finish)
+
+        root.add_widget(layout)
+
+        self.add_widget(root)
+
+    def finish_app(self, *args):
+
+        App.get_running_app().stop()
 
 
-sm.add_widget(FirstScreen(name="first"))
+sm.add_widget(FirstScreen(name="home"))
 sm.add_widget(FoodScreen(name="food"))
-sm.add_widget(FeeScreen(name="fee"))
 sm.add_widget(DateScreen(name="date"))
-sm.add_widget(GirlfriendsDayScreen(name="girlfriends"))
-sm.add_widget(PhotoScreen(name="photo"))
+sm.add_widget(GalleryScreen(name="gallery"))
+sm.add_widget(LetterScreen(name="letter"))
 sm.add_widget(FinalScreen(name="final"))
 
-sm.current="first"
 
+class ChirryLoveApp(App):
 
-class DateApp(App):
+    selected_food = "Pizza 🍕"
+
     def build(self):
+
+        self.title = "Chirry Love ❤️"
+
         return sm
 
 
-DateApp().run()			
+if __name__ == "__main__":
+    ChirryLoveApp().run()
